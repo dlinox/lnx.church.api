@@ -1,0 +1,1 @@
+INSERT INTO `parishes` (`id`, `name`, `address`, `phone_number`, `country`, `location`, `created_at`, `updated_at`) VALUES (1, 'Parroquia San Miguel', NULL, NULL, 'PER', '201201', '2024-12-23 13:21:46', '2024-12-23 13:21:47');
