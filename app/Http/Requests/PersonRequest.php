@@ -29,6 +29,7 @@ class PersonRequest extends FormRequest
                 'max:15',
                 Rule::unique('people', 'document_number')
                     ->where('document_type', $this->document_type)
+                    ->whereNotNull('document_type')
                     ->ignore($id),
             ],
 
