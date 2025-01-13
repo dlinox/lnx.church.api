@@ -16,5 +16,8 @@ class coreSeeder extends Seeder
 
         $locationsInserts = file_get_contents(database_path('sql/core/locationsInserts.sql'));
         DB::unprepared($locationsInserts);
+
+        $permissionsInserts = file_get_contents(database_path('sql/core/permissionsInserts.sql'));
+        DB::unprepared($permissionsInserts);
     }
 }

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('people', function (Blueprint $table) {
             $table->id();
-            $table->enum('document_type', ['01', '04', '06', '07', '11', '00'])->default('01');
+            $table->enum('document_type', ['01', '04', '06', '07', '11', '00'])->nullable();
             $table->string('document_number', 15)->nullable();
             $table->string('name');
             $table->string('paternal_last_name')->nullable();
