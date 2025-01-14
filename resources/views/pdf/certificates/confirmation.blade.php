@@ -19,7 +19,7 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Times New Roman', Times, serif;
             font-weight: bolder;
             /* font-size: 14px; */
         }
@@ -40,7 +40,7 @@
     <p class="box-godfather" style="position: absolute; top: 13.35cm; left: 5.2cm; width: 15cm;">{{$godparents}} </p>
     <p class="box-parish-baptism" style="position: absolute; display: block; top: 14.18cm; left: 6.6cm; width: 15cm;">{{$fellows['1']['baptism']['parish']}} </p>
     <p class="box-date-baptism" style="position: absolute; display: block; top: 15.01cm; left: 5.5cm; width: 15cm;"> {{$fellows['1']['baptism']['date']}} </p>
-    <p class="box-day-name" style="position: absolute; display: block; top: 18.4cm; left: 9cm; width: 3cm;"> El Collao </p>
+    <p class="box-day-name" style="position: absolute; display: block; top: 18.4cm; left: 9cm; width: 3cm;"> Ilave </p>
     <p class="box-day" style="position: absolute; display: block; top: 18.4cm; left: 12.6cm; width: 3cm;">{{$printDate['day']}}</p>
     <p class="box-month" style="position: absolute; display: block; top: 18.4cm; left: 14.2cm; width: 3cm;">{{$printDate['month']}}</p>
     <p class="box-year" style="position: absolute; display: block; top: 18.4cm; left: 17.9cm; width: 3cm;">{{$printDate['year']}}</p>

@@ -390,7 +390,7 @@ class SacramentRecordController extends Controller
             'people.name as name',
             'people.birth_date as birthDate',
             DB::raw("CONCAT_WS(' ', people.paternal_last_name, people.maternal_last_name) as lastName"),
-            DB::raw("CONCAT_WS(', ', countries.name, locations.district, people.birth_location_detail) as birthLocation"),
+            DB::raw("CONCAT_WS(', ', locations.district, people.birth_location_detail) as birthLocation"),
         )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
             ->leftJoin('locations', 'people.birth_location', '=', 'locations.id')
             ->leftJoin('countries', 'people.birth_country', '=', 'countries.id')

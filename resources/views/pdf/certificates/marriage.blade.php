@@ -19,7 +19,7 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Times New Roman', Times, serif;
             font-weight: bolder;
         }
     </style>
@@ -53,7 +53,7 @@
     <p class="box-observations" style="position: absolute; display: block; bottom: 10.6cm; left: 1.8cm; width: 17cm; line-height: 2.3; text-indent: 4.5cm;">{{$observations}}</p>
 
 
-    <p class="box-day-name" style="position: absolute; display: block; bottom: 8.5cm; left: 9.2cm; width: 3cm;">El Collao</p>
+    <p class="box-day-name" style="position: absolute; display: block; bottom: 8.5cm; left: 9.2cm; width: 3cm;">Ilave</p>
     <p class="box-day" style="position: absolute; display: block; bottom: 8.5cm; left: 12.6cm; width: 3cm;">{{$printDate['day']}}</p>
     <p class="box-month" style="position: absolute; display: block; bottom: 8.5cm; left: 14.2cm; width: 3cm;">{{$printDate['month']}}</p>
     <p class="box-year" style="position: absolute; display: block; bottom: 8.5cm; left: 17.9cm; width: 3cm;">{{$printDate['year']}}</p>
