@@ -39,10 +39,10 @@
     <p class="box-baptism-date" style="position: absolute; top: 12.7cm; left: 5.2cm; width: 15cm;">{{$sacramentDate}} </p>
     <p class="box-godfather" style="position: absolute; top: 13.6cm; left: 3.5cm; width: 15cm;">{{$godparents}} </p>
     <p class="box-observations" style="position: absolute; display: block; top: 14.1cm; left: 1.8cm; width: 17cm; line-height: 2.3; text-indent: 4.5cm;">{{$observations}}</p>
-    <p class="box-day-name" style="position: absolute; display: block; top: 18.4cm; left: 9.2cm; width: 3cm;">Ilave </p>
-    <p class="box-day" style="position: absolute; display: block; top: 18.4cm; left: 12.6cm; width: 3cm;">{{$printDate['day']}}</p>
-    <p class="box-month" style="position: absolute; display: block; top: 18.4cm; left: 14.2cm; width: 3cm;">{{$printDate['month']}}</p>
-    <p class="box-year" style="position: absolute; display: block; top: 18.4cm; left: 17.9cm; width: 3cm;">{{$printDate['year']}}</p>
+    <p class="box-day-name" style="position: absolute; display: block; top: 18.3cm; left: 9.2cm; width: 3cm;">Ilave </p>
+    <p class="box-day" style="position: absolute; display: block; top: 18.3cm; left: 12.6cm; width: 3cm;">{{$printDate['day']}}</p>
+    <p class="box-month" style="position: absolute; display: block; top: 18.3cm; left: 14.2cm; width: 3cm;">{{$printDate['month']}}</p>
+    <p class="box-year" style="position: absolute; display: block; top: 18.3cm; left: 17.9cm; width: 3cm;">{{$printDate['year']}}</p>
 </body>
 
 </html>
