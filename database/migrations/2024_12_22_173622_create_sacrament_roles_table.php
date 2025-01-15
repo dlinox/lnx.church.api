@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sacrament_roles', function (Blueprint $table) {
             $table->id();
-            $table->enum('role', [1, 2, 3, 4, 5, 6]);
+            $table->enum('role', [1, 2, 3, 4, 5, 6, 7]);
             $table->unsignedBigInteger('person_id');
             $table->unsignedBigInteger('sacrament_record_id');
             $table->foreign('person_id')->references('id')->on('people');
@@ -30,5 +30,3 @@ return new class extends Migration
         Schema::dropIfExists('sacrament_roles');
     }
 };
-
-

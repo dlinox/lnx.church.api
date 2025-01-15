@@ -19,7 +19,7 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            font-family: 'Times New Roman', Times, serif;
+            font-family: 'Courier New', Courier, monospace;
             font-weight: bolder;
             /* font-size: 14px; */
         }

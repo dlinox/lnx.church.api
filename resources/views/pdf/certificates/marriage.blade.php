@@ -19,7 +19,7 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            font-family: 'Times New Roman', Times, serif;
+            font-family: 'Courier New', Courier, monospace;
             font-weight: bolder;
         }
     </style>
@@ -49,7 +49,7 @@
     <p class="box-sacrament-date" style="position: absolute; bottom: 13cm; left: 5.7cm; width: 15cm;">{{$sacramentDate}} </p>
     <p class="box-minister" style="position: absolute; bottom: 12.45cm; left: 5.3cm; width: 15cm;">{{$minister}} </p>
     <p class="box-godfather" style="position: absolute; bottom: 11.85cm; left: 3.6cm; width: 15cm;">{{$godparents}} </p>
-    <p class="box-witness" style="position: absolute; bottom: 11.3cm; left: 3.6cm; width: 15cm;"> - </p>
+    <p class="box-witness" style="position: absolute; bottom: 11.3cm; left: 3.6cm; width: 15cm;"> {{$witness}} </p>
     <p class="box-observations" style="position: absolute; display: block; bottom: 10.6cm; left: 1.8cm; width: 17cm; line-height: 2.3; text-indent: 4.5cm;">{{$observations}}</p>
 
 

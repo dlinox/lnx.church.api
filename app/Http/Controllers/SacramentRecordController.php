@@ -453,10 +453,18 @@ class SacramentRecordController extends Controller
             ->groupBy('sacrament_roles.sacrament_record_id')
             ->first();
 
+        $witnesses  = SacramentRole::select(
+            DB::raw(" GROUP_CONCAT(DISTINCT IF(people.name IS NOT NULL, CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name), NULL) SEPARATOR ', ' ) AS 'godParents'"),
+        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->whereIN('sacrament_roles.role', ['6'])
+            ->where('sacrament_roles.sacrament_record_id', $request->id)
+            ->groupBy('sacrament_roles.sacrament_record_id')
+            ->first();
+
         $data['fellows'] = $fellowsArray;
         $data['godparents'] = $godparents ? $godparents->godParents : "";
+        $data['witness'] = $witnesses ? $witnesses->godParents : "";
         $data['sacramentDate'] = Carbon::parse($data->sacramentDate)->locale('es')->isoFormat('D [de] MMMM, YYYY');
-
 
         $data['printDate'] = [
             'dayName' => Carbon::now()->locale('es')->isoFormat('dddd'),
@@ -464,7 +472,6 @@ class SacramentRecordController extends Controller
             'month' => Carbon::now()->locale('es')->isoFormat('MMMM'),
             'year' => Carbon::now()->locale('es')->isoFormat('YYYY'),
         ];
-
 
         if ($data->sacramentType == '1') {
             $background = config('app.url') . '/templates/baptism.jpeg';
