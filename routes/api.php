@@ -85,13 +85,9 @@ Route::group(['prefix' => 'sacrament-records'], function () {
 
     Route::post('/get-print-data', [SacramentRecordController::class, 'getPrintData'])->middleware('auth:sanctum');
     Route::post('/print-record', [SacramentRecordController::class, 'printRecord'])->middleware('auth:sanctum');
-    Route::get('/get-baptism-person/{personId}', [SacramentRecordController::class, 'getBaptismPerson'])->middleware('auth:sanctum');
-
-    //saveExternalBaptism
+    Route::get('/get-sacraments-person/{personId}', [SacramentRecordController::class, 'getSacramentsPerson'])->middleware('auth:sanctum');
     Route::post('/save-external-baptism', [SacramentRecordController::class, 'saveExternalBaptism'])->middleware('auth:sanctum');
-    //searchActs
     Route::get('/search-acts/{search}', [SacramentRecordController::class, 'searchActs'])->middleware('auth:sanctum');
-    //reportCountRecordByType
     Route::get('/report-count-record-by-type', [SacramentRecordController::class, 'reportCountRecordByType'])->middleware('auth:sanctum');
 });
 

@@ -25,11 +25,11 @@ class AuthController extends Controller
             ->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return ApiResponse::error('Credenciales incorrectas', 401);
+            return ApiResponse::error('', 'Credenciales incorrectas');
         }
 
         if ($user->status == 0) {
-            return ApiResponse::error('Usuario inactivo', 401);
+            return ApiResponse::error('', 'Usuario inactivo',);
         }
 
         return ApiResponse::success($this->userState($user));

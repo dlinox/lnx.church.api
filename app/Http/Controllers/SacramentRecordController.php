@@ -234,7 +234,7 @@ class SacramentRecordController extends Controller
             $sacrament = Sacrament::create([
                 'date' => $data['date'],
                 'description' => null,
-                'type' => 1,
+                'type' => $data['type'],
                 'is_external' => true,
                 'parish_id' => $data['parish']['value'],
                 'minister_id' => null,
@@ -396,6 +396,7 @@ class SacramentRecordController extends Controller
             ->leftJoin('countries', 'people.birth_country', '=', 'countries.id')
             ->whereIN('sacrament_roles.role', ['1', '2', '3'])
             ->where('sacrament_roles.sacrament_record_id', $request->id)
+            ->orderBy('sacrament_roles.role')
             ->get();
 
         $fellowsArray = [];
@@ -408,7 +409,9 @@ class SacramentRecordController extends Controller
             ];
 
             if (in_array($role->role, [1, 2, 3])) {
-                $family = FamilyRelationship::where('person_id', $role->personId)->get();
+                $family = FamilyRelationship::where('person_id', $role->personId)
+                    ->orderBy('relationship')
+                    ->get();
                 $familyArray = [];
                 foreach ($family as $f) {
 
@@ -550,11 +553,16 @@ class SacramentRecordController extends Controller
         ];
     }
 
-    public function getBaptismPerson($personId)
+    public function getSacramentsPerson($personId)
     {
 
         try {
-            $sacramentRecord = SacramentRecord::select(
+            $data = [
+                'baptism' => null,
+                'confirmation' => null
+            ];
+
+            $baptism = SacramentRecord::select(
                 'sacraments.date as date',
                 'parishes.name as parish',
             )
@@ -566,13 +574,29 @@ class SacramentRecordController extends Controller
                 ->where('sacrament_roles.role', 1)
                 ->first();
 
-            if (!$sacramentRecord) {
-                return ApiResponse::error(null, 'La persona no tiene registros de bautizo');
+            if ($baptism) {
+                $baptism->date = Carbon::parse($baptism->date)->locale('es')->isoFormat('D [de] MMMM, YYYY');
+                $data['baptism'] = $baptism;
             }
 
-            $sacramentRecord->date = Carbon::parse($sacramentRecord->date)->locale('es')->isoFormat('D [de] MMMM, YYYY');
+            $confirmation = SacramentRecord::select(
+                'sacraments.date as date',
+                'parishes.name as parish',
+            )
+                ->join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
+                ->join('sacrament_roles', 'sacrament_records.id', '=', 'sacrament_roles.sacrament_record_id')
+                ->join('parishes', 'sacraments.parish_id', '=', 'parishes.id')
+                ->where('sacrament_roles.person_id', $personId)
+                ->where('sacraments.type', 2)
+                ->where('sacrament_roles.role', 1)
+                ->first();
 
-            return ApiResponse::success($sacramentRecord);
+            if ($confirmation) {
+                $confirmation->date = Carbon::parse($confirmation->date)->locale('es')->isoFormat('D [de] MMMM, YYYY');
+                $data['confirmation'] = $confirmation;
+            }
+
+            return ApiResponse::success($data);
         } catch (\Exception $e) {
             return ApiResponse::error($e->getMessage(), 'Error al obtener el registro');
         }
