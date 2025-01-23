@@ -51,6 +51,8 @@ Route::group(['prefix' => 'sacramental-books'], function () {
     Route::delete('/delete/{id}', [SacramentBookController::class, 'delete'])->middleware('auth:sanctum');
     //getBookNumbering
     Route::get('/get-book-numbering/{id}', [SacramentBookController::class, 'getBookNumbering'])->middleware('auth:sanctum');
+    //getBookRegisters
+    Route::get('/get-book-registers/{id}', [SacramentBookController::class, 'getBookRegisters'])->middleware('auth:sanctum');
 });
 
 //ministers
@@ -89,6 +91,12 @@ Route::group(['prefix' => 'sacrament-records'], function () {
     Route::post('/save-external-baptism', [SacramentRecordController::class, 'saveExternalBaptism'])->middleware('auth:sanctum');
     Route::get('/search-acts/{search}', [SacramentRecordController::class, 'searchActs'])->middleware('auth:sanctum');
     Route::get('/report-count-record-by-type', [SacramentRecordController::class, 'reportCountRecordByType'])->middleware('auth:sanctum');
+    Route::get('/get-data-edit/{id}', [SacramentRecordController::class, 'getDataEdit'])->middleware('auth:sanctum');
+
+    Route::post('/update-act', [SacramentRecordController::class, 'updateAct'])->middleware('auth:sanctum');
+
+    //printRecordWithData
+    Route::post('/print-record-with-data/{id}', [SacramentRecordController::class, 'printRecordWithData'])->middleware('auth:sanctum');
 });
 
 //people

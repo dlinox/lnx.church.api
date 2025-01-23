@@ -38,4 +38,9 @@ class Genders
     {
         return collect(static::items)->firstWhere('title', $title)['value'];
     }
+
+    public static function hasKey(int $key): bool
+    {
+        return collect(static::items)->contains('value', $key);
+    }
 }

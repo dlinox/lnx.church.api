@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Responses\ApiResponse;
+use App\Models\Core\Country;
+use App\Models\Core\Location;
 use App\Models\Core\Person;
 use App\Models\FamilyRelationship;
+use App\Models\Minister;
+use App\Models\Parish;
 use App\Models\PrintingRecord;
 use App\Models\Sacrament;
 use App\Models\SacramentBook;
@@ -360,118 +364,7 @@ class SacramentRecordController extends Controller
     public function getPrintData(Request $request)
     {
 
-        $data = $this->sacramentRecord
-            ->select(
-                'sacrament_records.id as id',
-                'parishes.name as parish',
-                DB::raw("CONCAT_WS(' ', ministers.name, ministers.paternal_last_name, ministers.maternal_last_name) as minister"),
-                'sacrament_books.number as bookNumber',
-                'sacrament_records.folio_number as folioNumber',
-                'sacrament_records.act_number as actNumber',
-                'sacrament_records.issue_date as issueDate',
-                'sacrament_records.observation as observations',
-                'sacraments.date as sacramentDate',
-                'sacraments.type as sacramentType',
-            )
-            ->join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
-            ->join('ministers', 'sacraments.minister_id', '=', 'ministers.id')
-            ->join('parishes', 'sacraments.parish_id', '=', 'parishes.id')
-            ->join('sacrament_books', 'sacrament_records.sacrament_book_id', '=', 'sacrament_books.id')
-            ->where('sacrament_records.id', $request->id)
-            ->first();
-
-        if (!$data) {
-            return ApiResponse::error(null, 'El registro no existe');
-        }
-
-        $fellows = SacramentRole::select(
-            'sacrament_roles.person_id as personId',
-            'sacrament_roles.role',
-            'people.name as name',
-            'people.birth_date as birthDate',
-            DB::raw("CONCAT_WS(' ', people.paternal_last_name, people.maternal_last_name) as lastName"),
-            DB::raw("CONCAT_WS(', ', locations.district, people.birth_location_detail) as birthLocation"),
-        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
-            ->leftJoin('locations', 'people.birth_location', '=', 'locations.id')
-            ->leftJoin('countries', 'people.birth_country', '=', 'countries.id')
-            ->whereIN('sacrament_roles.role', ['1', '2', '3'])
-            ->where('sacrament_roles.sacrament_record_id', $request->id)
-            ->orderBy('sacrament_roles.role')
-            ->get();
-
-        $fellowsArray = [];
-        foreach ($fellows as $role) {
-            $fellowsArray[$role->role] = [
-                'name' => $role->name,
-                'lastName' => $role->lastName,
-                'birthLocation' => $role->birthLocation,
-                'birthDate' =>  $role->birthDate ? Carbon::parse($role->birthDate)->locale('es')->isoFormat('D [de] MMMM, YYYY') : null,
-            ];
-
-            if (in_array($role->role, [1, 2, 3])) {
-                $family = FamilyRelationship::where('person_id', $role->personId)
-                    ->orderBy('relationship')
-                    ->get();
-                $familyArray = [];
-                foreach ($family as $f) {
-
-                    $relatedPerson = Person::select(
-                        DB::raw("CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name) as name"),
-                    )->where('id', $f->related_person_id)->first();
-
-                    $familyArray[$f->relationship] = [
-                        'name' => $relatedPerson->name,
-                    ];
-                }
-                $fellowsArray[$role->role]['family'] = $familyArray;
-
-                if ($data->sacramentType == '2' || $data->sacramentType == '4') {
-                    $fellowsArray[$role->role]['baptism'] = SacramentRecord::select(
-                        'sacraments.date as date',
-                        'parishes.name as parish',
-                    )
-                        ->join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
-                        ->join('sacrament_roles', 'sacrament_records.id', '=', 'sacrament_roles.sacrament_record_id')
-                        ->join('parishes', 'sacraments.parish_id', '=', 'parishes.id')
-                        ->where('sacrament_roles.person_id', $role->personId)
-                        ->where('sacraments.type', 1)
-                        ->where('sacrament_roles.role', 1)
-                        ->first();
-
-                    if ($fellowsArray[$role->role]['baptism']) {
-                        $fellowsArray[$role->role]['baptism']->date = Carbon::parse($fellowsArray[$role->role]['baptism']->date)->locale('es')->isoFormat('D [de] MMMM, YYYY');
-                    }
-                }
-            }
-        }
-
-        $godparents = SacramentRole::select(
-            DB::raw(" GROUP_CONCAT(DISTINCT IF(people.name IS NOT NULL, CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name), NULL) SEPARATOR ', ' ) AS 'godParents'"),
-        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
-            ->whereIN('sacrament_roles.role', ['4', '5'])
-            ->where('sacrament_roles.sacrament_record_id', $request->id)
-            ->groupBy('sacrament_roles.sacrament_record_id')
-            ->first();
-
-        $witnesses  = SacramentRole::select(
-            DB::raw(" GROUP_CONCAT(DISTINCT IF(people.name IS NOT NULL, CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name), NULL) SEPARATOR ', ' ) AS 'godParents'"),
-        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
-            ->whereIN('sacrament_roles.role', ['6'])
-            ->where('sacrament_roles.sacrament_record_id', $request->id)
-            ->groupBy('sacrament_roles.sacrament_record_id')
-            ->first();
-
-        $data['fellows'] = $fellowsArray;
-        $data['godparents'] = $godparents ? $godparents->godParents : "";
-        $data['witness'] = $witnesses ? $witnesses->godParents : "";
-        $data['sacramentDate'] = Carbon::parse($data->sacramentDate)->locale('es')->isoFormat('D [de] MMMM, YYYY');
-
-        $data['printDate'] = [
-            'dayName' => Carbon::now()->locale('es')->isoFormat('dddd'),
-            'day' => Carbon::now()->locale('es')->isoFormat('D'),
-            'month' => Carbon::now()->locale('es')->isoFormat('MMMM'),
-            'year' => Carbon::now()->locale('es')->isoFormat('YYYY'),
-        ];
+        $data = $this->printData($request->id);
 
         if ($data->sacramentType == '1') {
             $background = config('app.url') . '/templates/baptism.jpeg';
@@ -500,7 +393,6 @@ class SacramentRecordController extends Controller
             $data = $request->all();
 
             DB::beginTransaction();
-
 
             $sacrament = SacramentRecord::join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
                 ->where('sacrament_records.id', $data['id'])
@@ -666,6 +558,505 @@ class SacramentRecordController extends Controller
             return ApiResponse::success($items);
         } catch (\Exception $e) {
             return ApiResponse::error($e->getMessage(), 'Error al obtener los datos');
+        }
+    }
+
+    public function getDataEdit($id)
+    {
+        try {
+
+            $sacramentRecord = SacramentRecord::find($id);
+            if (!$sacramentRecord) {
+                return ApiResponse::error(null, 'El registro no existe');
+            }
+
+            $sacramentBook = SacramentBook::find($sacramentRecord->sacrament_book_id);
+
+            $sacrament = Sacrament::find($sacramentRecord->sacrament_id);
+
+            $record = [];
+
+            $record['id'] = $sacramentRecord->id;
+            $record['sacramentId'] = $sacramentRecord->sacrament_id;
+
+            if ($sacramentBook) {
+                $sacramentBookYearFinish = $sacramentBook->year_finish ? $sacramentBook->year_finish : 'Actualidad';
+                $record['sacramentBook'] = [
+                    'value' => $sacramentBook->id,
+                    'title' => $sacramentBook->number . ' (' . $sacramentBook->year_start . ' - ' . $sacramentBookYearFinish  . ')'
+                ];
+            } else {
+                $record['sacramentBook'] = null;
+            }
+
+            $record['folioNumber'] = $sacramentRecord->folio_number;
+            $record['actNumber'] = $sacramentRecord->act_number;
+            $record['observations'] = $sacramentRecord->observation;
+            $record['canonical'] = $sacramentRecord->canonical;
+            $record['issued'] = $sacramentRecord->status;
+            $record['date']  = $sacrament->date;
+            $record['type'] = $sacrament->type;
+
+            $record['parish'] = Parish::select(
+                'parishes.id as value',
+                'parishes.name as title',
+            )
+                ->where('parishes.id', $sacrament->parish_id)
+                ->first();
+
+            $record['minister'] = Minister::select(
+                'ministers.id as value',
+                DB::raw("CONCAT_WS(' ', ministers.name, ministers.paternal_last_name, ministers.maternal_last_name) as title"),
+            )
+                ->where('ministers.id', $sacrament->minister_id)
+                ->first();
+
+
+            $roles = $this->getRoles($id, $sacrament->type);
+
+            $record['roles'] = $roles;
+
+            return ApiResponse::success($record);
+        } catch (\Exception $e) {
+            return ApiResponse::error($e->getMessage(), 'Error al obtener los datos');
+        }
+    }
+
+    public function getRoles($recordId, $type)
+    {
+
+        $roles = [];
+
+        if (in_array($type, ['1', '2'])) {
+
+            $roles['fellow'] = $this->getPersonWithFamilyDetails($recordId, '1');
+            if ($type == '2') {
+                $roles['fellow']->baptism = $this->getSacramentDetails($roles['fellow']->personId, 1, '1');
+            }
+        }
+
+        if ($type == '4') {
+            $roles['husband'] = $this->getPersonWithFamilyDetails($recordId, '2');
+            $roles['husband']->baptism = $this->getSacramentDetails($roles['husband']->personId, 1, '1');
+            $roles['husband']->confirmation = $this->getSacramentDetails($roles['husband']->personId, 2, '1');
+
+            $roles['wife'] = $this->getPersonWithFamilyDetails($recordId, '3');
+            $roles['wife']->baptism = $this->getSacramentDetails($roles['wife']->personId, 1, '1');
+            $roles['wife']->confirmation = $this->getSacramentDetails($roles['wife']->personId, 2, '1');
+
+            $roles['witnesses'] = $this->getWitnesses($recordId);
+        }
+
+        $roles['godparents'] = $this->getGodparents($recordId);
+
+        return $roles;
+    }
+
+
+    private function getPersonDetails($recordId, $role)
+    {
+        $person = SacramentRole::select(
+            'sacrament_roles.person_id as personId',
+            'sacrament_roles.role',
+            'people.document_type as documentType',
+            'people.document_number as documentNumber',
+            'people.name as name',
+            'people.paternal_last_name as paternalLastName',
+            'people.maternal_last_name as maternalLastName',
+            'people.birth_date as birthDate',
+            'people.gender',
+            'people.birth_country as birthCountry',
+            'people.birth_location as birthLocation'
+        )
+            ->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->where('sacrament_roles.role', $role)
+            ->where('sacrament_roles.sacrament_record_id', $recordId)
+            ->first();
+
+        $person->birthCountry = $this->getCountryDetails($person->birthCountry);
+        $person->birthLocation = $this->getLocationDetails($person->birthLocation);
+
+        return $person;
+    }
+
+    private function getCountryDetails($countryId)
+    {
+        return Country::select('countries.id as value', 'countries.name as title')
+            ->where('countries.id', $countryId)
+            ->first();
+    }
+
+    private function getLocationDetails($locationId)
+    {
+        return Location::select(
+            'locations.id as value',
+            DB::raw("CONCAT_WS(', ', locations.department, locations.province, locations.district) as title")
+        )
+            ->where('locations.id', $locationId)
+            ->first();
+    }
+
+    private function getSacramentDetails($personId, $type, $role)
+    {
+        return SacramentRecord::select(
+            'sacraments.date as date',
+            'parishes.name as parish',
+            'sacraments.is_external as isExternal',
+        )
+            ->join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
+            ->join('sacrament_roles', 'sacrament_records.id', '=', 'sacrament_roles.sacrament_record_id')
+            ->join('parishes', 'sacraments.parish_id', '=', 'parishes.id')
+            ->where('sacrament_roles.person_id', $personId)
+            ->where('sacraments.type', $type)
+            ->where('sacrament_roles.role', $role)
+            ->first();
+    }
+
+    private function getPersonWithFamilyDetails($recordId, $role)
+    {
+        $person = $this->getPersonDetails($recordId, $role);
+
+        $person->father = $this->getFamilyMember($person->personId, '1');
+        $person->mother = $this->getFamilyMember($person->personId, '2');
+
+        return $person;
+    }
+
+    private function getFamilyMember($personId, $relationship)
+    {
+        return FamilyRelationship::select(
+            'family_relationships.related_person_id as personId',
+            'family_relationships.relationship as role',
+            'people.name as name',
+            'people.paternal_last_name as paternalLastName',
+            'people.maternal_last_name as maternalLastName',
+            'people.gender'
+        )
+            ->join('people', 'family_relationships.related_person_id', '=', 'people.id')
+            ->where('family_relationships.person_id', $personId)
+            ->where('family_relationships.relationship', $relationship)
+            ->first();
+    }
+
+    private function getWitnesses($recordId)
+    {
+        return SacramentRole::select(
+            'sacrament_roles.person_id as personId',
+            'sacrament_roles.role',
+            'people.name as name',
+            'people.paternal_last_name as paternalLastName',
+            'people.maternal_last_name as maternalLastName',
+            'people.birth_date as birthDate',
+            'people.gender'
+        )
+            ->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->whereIN('sacrament_roles.role', ['6'])
+            ->where('sacrament_roles.sacrament_record_id', $recordId)
+            ->orderBy('sacrament_roles.role')
+            ->get();
+    }
+
+    private function getGodparents($recordId)
+    {
+        return SacramentRole::select(
+            'sacrament_roles.person_id as personId',
+            'sacrament_roles.role',
+            'people.name as name',
+            'people.paternal_last_name as paternalLastName',
+            'people.maternal_last_name as maternalLastName',
+            'people.birth_date as birthDate',
+            'people.gender'
+        )
+            ->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->whereIN('sacrament_roles.role', ['4', '5'])
+            ->where('sacrament_roles.sacrament_record_id', $recordId)
+            ->orderBy('sacrament_roles.role')
+            ->get();
+    }
+
+
+    public function updateAct(Request $request)
+    {
+
+        $sacramentRecord = SacramentRecord::find($request->id);
+        if (!$sacramentRecord) {
+            return ApiResponse::error(null, 'El registro no existe');
+        }
+
+        $data = $request->all();
+
+        try {
+            DB::beginTransaction();
+
+            $sacrament = Sacrament::find($sacramentRecord->sacrament_id);
+
+            if ($sacrament->parish_id != $data['parish']['value'] || $sacrament->minister_id != $data['minister']['value'] || $sacrament->date != $data['date']) {
+                $sacrament = Sacrament::create([
+                    'date' => $data['date'],
+                    'description' => null,
+                    'type' => $sacrament->type,
+                    'is_external' => false,
+                    'parish_id' => $data['parish']['value'],
+                    'minister_id' => $data['minister']['value'],
+                ]);
+            }
+
+            $record = SacramentRecord::where('folio_number', $data['folioNumber'])
+                ->where('act_number', $data['actNumber'])
+                ->where('sacrament_book_id', $data['sacramentBook']['value'])
+                ->where('id', '!=', $sacramentRecord->id)
+                ->exists();
+
+            if ($record) {
+                throw new \Exception('Ya existe un registro con el mismo número de folio y acta');
+            }
+
+            $sacramentRecord->sacrament_book_id = $data['sacramentBook']['value'];
+            $sacramentRecord->folio_number = $data['folioNumber'];
+            $sacramentRecord->act_number = $data['actNumber'];
+            $sacramentRecord->observation = $data['observations'];
+            $sacramentRecord->canonical = $data['canonical'];
+            $sacramentRecord->sacrament_id = $sacrament->id;
+            $sacramentRecord->save();
+
+            $roles = $data['roles'];
+            if ($sacrament->type == '1' || $sacrament->type == '2') {
+                $this->updateMainPerson($roles['fellow']);
+            }
+
+
+            if ($sacrament->type == '4') {
+                $this->updateMainPerson($roles['husband']);
+                $this->updateMainPerson($roles['wife']);
+                $witnesses = $roles['witnesses'];
+
+                foreach ($witnesses as $witness) {
+                    $this->updateSecondaryPerson($witness);
+                }
+            }
+
+            $godparents = $roles['godparents'];
+
+            foreach ($godparents as $godparent) {
+                $this->updateSecondaryPerson($godparent);
+            }
+
+            DB::commit();
+            return ApiResponse::success(null, 'Registro actualizado correctamente');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::error($e->getMessage(), 'Error al actualizar el registro: ' . $e->getMessage());
+        }
+    }
+
+    private function updateMainPerson($data)
+    {
+
+        $person = Person::where('document_type', $data['documentType'])
+            ->where('document_number', $data['documentNumber'])
+            ->where('id', '!=', $data['personId'])
+            ->exists();
+
+        if ($person) {
+            throw new \Exception('Ya existe otra persona con el documento: ' . $data['documentNumber']);
+        }
+
+        $person = Person::find($data['personId']);
+
+        // var_dump($data);
+
+        $person->document_type = $data['documentType'];
+        $person->document_number = $data['documentNumber'];
+        $person->name = $data['name'];
+        $person->paternal_last_name = $data['paternalLastName'];
+        $person->maternal_last_name = $data['maternalLastName'];
+        $person->birth_date = $data['birthDate'];
+        $person->gender = $data['gender'];
+
+        $person->birth_country = $data['birthCountry'] ? $data['birthCountry'] : null;
+        $person->birth_location = $data['birthLocation']  ? $data['birthLocation'] : null;
+        $person->save();
+
+        // var_dump($person);
+
+        //actualizar familia
+        $father = $data['father'];
+        $this->updateSecondaryPerson($father);
+
+        $mother = $data['mother'];
+        $this->updateSecondaryPerson($mother);
+
+        return $person->id;
+    }
+
+    private function updateSecondaryPerson($data)
+    {
+        try {
+
+            $person = Person::find($data['personId']);
+            $person->name = $data['name'];
+            $person->paternal_last_name = $data['paternalLastName'];
+            $person->maternal_last_name = $data['maternalLastName'];
+            $person->gender = $data['gender'];
+            $person->save();
+            return $person->id;
+        } catch (\Exception $e) {
+            throw new \Exception('Error al actualizar la persona');
+        }
+    }
+
+    private function printData($id)
+    {
+        $data = $this->sacramentRecord
+            ->select(
+                'sacrament_records.id as id',
+                'parishes.name as parish',
+                DB::raw("CONCAT_WS(' ', ministers.name, ministers.paternal_last_name, ministers.maternal_last_name) as minister"),
+                'sacrament_books.number as bookNumber',
+                'sacrament_records.folio_number as folioNumber',
+                'sacrament_records.act_number as actNumber',
+                'sacrament_records.issue_date as issueDate',
+                'sacrament_records.observation as observations',
+                'sacraments.date as sacramentDate',
+                'sacraments.type as sacramentType',
+            )
+            ->join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
+            ->join('ministers', 'sacraments.minister_id', '=', 'ministers.id')
+            ->join('parishes', 'sacraments.parish_id', '=', 'parishes.id')
+            ->join('sacrament_books', 'sacrament_records.sacrament_book_id', '=', 'sacrament_books.id')
+            ->where('sacrament_records.id', $id)
+            ->first();
+
+        if (!$data) {
+
+            throw new \Exception('El registro no existe');
+        }
+
+        $fellows = SacramentRole::select(
+            'sacrament_roles.person_id as personId',
+            'sacrament_roles.role',
+            'people.name as name',
+            'people.birth_date as birthDate',
+            DB::raw("CONCAT_WS(' ', people.paternal_last_name, people.maternal_last_name) as lastName"),
+            DB::raw("CONCAT_WS(', ', locations.district, people.birth_location_detail) as birthLocation"),
+        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->leftJoin('locations', 'people.birth_location', '=', 'locations.id')
+            ->leftJoin('countries', 'people.birth_country', '=', 'countries.id')
+            ->whereIN('sacrament_roles.role', ['1', '2', '3'])
+            ->where('sacrament_roles.sacrament_record_id', $id)
+            ->orderBy('sacrament_roles.role')
+            ->get();
+
+        $fellowsArray = [];
+        foreach ($fellows as $role) {
+            $fellowsArray[$role->role] = [
+                'name' => $role->name,
+                'lastName' => $role->lastName,
+                'birthLocation' => $role->birthLocation,
+                'birthDate' =>  $role->birthDate ? Carbon::parse($role->birthDate)->locale('es')->isoFormat('D [de] MMMM, YYYY') : null,
+            ];
+
+            if (in_array($role->role, [1, 2, 3])) {
+                $family = FamilyRelationship::where('person_id', $role->personId)
+                    ->orderBy('relationship')
+                    ->get();
+                $familyArray = [];
+                foreach ($family as $f) {
+
+                    $relatedPerson = Person::select(
+                        DB::raw("CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name) as name"),
+                    )->where('id', $f->related_person_id)->first();
+
+                    $familyArray[$f->relationship] = [
+                        'name' => $relatedPerson->name,
+                    ];
+                }
+                $fellowsArray[$role->role]['family'] = $familyArray;
+
+                if ($data->sacramentType == '2' || $data->sacramentType == '4') {
+                    $fellowsArray[$role->role]['baptism'] = SacramentRecord::select(
+                        'sacraments.date as date',
+                        'parishes.name as parish',
+                    )
+                        ->join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
+                        ->join('sacrament_roles', 'sacrament_records.id', '=', 'sacrament_roles.sacrament_record_id')
+                        ->join('parishes', 'sacraments.parish_id', '=', 'parishes.id')
+                        ->where('sacrament_roles.person_id', $role->personId)
+                        ->where('sacraments.type', 1)
+                        ->where('sacrament_roles.role', 1)
+                        ->first();
+
+                    if ($fellowsArray[$role->role]['baptism']) {
+                        $fellowsArray[$role->role]['baptism']->date = Carbon::parse($fellowsArray[$role->role]['baptism']->date)->locale('es')->isoFormat('D [de] MMMM, YYYY');
+                    }
+                }
+            }
+        }
+
+        $godparents = SacramentRole::select(
+            DB::raw(" GROUP_CONCAT(DISTINCT IF(people.name IS NOT NULL, CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name), NULL) SEPARATOR ', ' ) AS 'godParents'"),
+        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->whereIN('sacrament_roles.role', ['4', '5'])
+            ->where('sacrament_roles.sacrament_record_id', $id)
+            ->groupBy('sacrament_roles.sacrament_record_id')
+            ->first();
+
+        $witnesses  = SacramentRole::select(
+            DB::raw(" GROUP_CONCAT(DISTINCT IF(people.name IS NOT NULL, CONCAT_WS(' ', people.name, people.paternal_last_name, people.maternal_last_name), NULL) SEPARATOR ', ' ) AS 'godParents'"),
+        )->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+            ->whereIN('sacrament_roles.role', ['6'])
+            ->where('sacrament_roles.sacrament_record_id', $id)
+            ->groupBy('sacrament_roles.sacrament_record_id')
+            ->first();
+
+        $data['fellows'] = $fellowsArray;
+        $data['godparents'] = $godparents ? $godparents->godParents : "";
+        $data['witness'] = $witnesses ? $witnesses->godParents : "";
+        $data['sacramentDate'] = Carbon::parse($data->sacramentDate)->locale('es')->isoFormat('D [de] MMMM, YYYY');
+
+        $data['printDate'] = [
+            'dayName' => Carbon::now()->locale('es')->isoFormat('dddd'),
+            'day' => Carbon::now()->locale('es')->isoFormat('D'),
+            'month' => Carbon::now()->locale('es')->isoFormat('MMMM'),
+            'year' => Carbon::now()->locale('es')->isoFormat('YYYY'),
+        ];
+
+        return $data;
+    }
+
+    public function printRecordWithData($id)
+    {
+        try {
+            $user = Auth::user();
+
+            DB::beginTransaction();
+
+            $data = $this->printData($id);
+            $data = $data->toArray();
+            $sacrament = SacramentRecord::join('sacraments', 'sacrament_records.sacrament_id', '=', 'sacraments.id')
+                ->where('sacrament_records.id', $data['id'])
+                ->first();
+
+            if ($data['observations'] != null || $data['observations'] != '') {
+                SacramentRecord::where('id', $data['id'])->update(['observation' => $data['observations']]);
+            }
+
+            PrintingRecord::register($data, $user->id);
+
+            if ($sacrament->type == 1) {
+                $pdf = $this->generateCertificate($data, null, 'pdf.certificates.baptism')['pdf'];
+            } else if ($sacrament->type == 2) {
+                $pdf = $this->generateCertificate($data, null, 'pdf.certificates.confirmation')['pdf'];
+            } else if ($sacrament->type == 4) {
+                $pdf = $this->generateCertificate($data, null, 'pdf.certificates.marriage')['pdf'];
+            }
+
+            DB::commit();
+            return response($pdf->output())
+                ->header('Content-Type', 'application/pdf');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return ApiResponse::error($e->getMessage(), 'Error al imprimir el registro');
         }
     }
 }

@@ -52,4 +52,10 @@ class DocumentTypes
     {
         return collect(static::items)->firstWhere('title', $title)['value'];
     }
+    // Haskey
+    public static function hasKey(string $key): bool
+    {
+        return collect(static::items)->contains('value', $key);
+    }
+
 }

@@ -23,7 +23,7 @@ class SacramentRecord extends Model
     ];
 
     protected $casts = [
-        'issue_date' => 'datetime:Y-m-d H:i:s',
+        'issue_date' => 'date:Y-m-d',
         'sacrament_book_id' => 'integer',
         'sacrament_id' => 'integer',
         'folioNumber' => ZeroPaddingCast::class . ':4',

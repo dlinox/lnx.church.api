@@ -21,6 +21,10 @@ class DocumentTypeCast implements CastsAttributes
         if (is_null($value)) {
             return null;
         }
+        //si es string y esta en el enum
+        if (is_string($value) && DocumentTypes::hasKey($value)) {
+            return $value;
+        }
         return DocumentTypes::value($value['title']);
     }
 }

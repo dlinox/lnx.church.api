@@ -114,4 +114,72 @@ class SacramentBookController extends Controller
             return ApiResponse::error($e->getMessage(), 'Error al obtener el número de libro');
         }
     }
+
+    //book registers
+    public function getBookRegisters($id)
+    {
+        try {
+            // $registers = [];
+            $sacramentBooks = $this->sacramentBooks->find($id);
+            if (!$sacramentBooks) {
+                return ApiResponse::error(null, 'No se encontró el libro sacramental');
+            }
+
+            if ($sacramentBooks->sacrament_type['value'] == '1' || $sacramentBooks->sacrament_type['value'] == '2') {
+                $registers = $this->sacramentBooks
+                    ->select(
+                        'people.document_type as documentType',
+                        'people.document_number as documentNumber',
+                        'people.name',
+                        'people.paternal_last_name as paternalLastName',
+                        'people.maternal_last_name as maternalLastName',
+                        'sacrament_records.folio_number as folioNumber',
+                        'sacrament_records.act_number as actNumber',
+                        'sacrament_records.observation',
+                        'sacrament_records.status'
+                    )
+                    ->join('sacrament_records', 'sacrament_books.id', '=', 'sacrament_records.sacrament_book_id')
+                    ->join('sacrament_roles', 'sacrament_records.id', '=', 'sacrament_roles.sacrament_record_id')
+                    ->join('people', 'sacrament_roles.person_id', '=', 'people.id')
+                    ->where('sacrament_roles.role', '1')
+                    ->where('sacrament_books.id', $id)
+                    ->where('sacrament_books.sacrament_type', $sacramentBooks->sacrament_type)
+                    ->orderBy('sacrament_records.folio_number', 'asc')
+                    ->orderBy('sacrament_records.act_number', 'asc')
+                    ->get();
+            }
+
+            if ($sacramentBooks->sacrament_type['value'] == '4') {
+                $registers = $this->sacramentBooks
+                    ->select(
+                        DB::raw("GROUP_CONCAT(DISTINCT IF(husband.name IS NOT NULL, CONCAT_WS(' ', husband.name, husband.paternal_last_name, husband.maternal_last_name), NULL)) AS 'husband'"),
+                        DB::raw("GROUP_CONCAT(DISTINCT IF(wife.name IS NOT NULL, CONCAT_WS(' ', wife.name, wife.paternal_last_name, wife.maternal_last_name), NULL)) AS 'wife'"),
+                        'sacrament_records.folio_number as folioNumber',
+                        'sacrament_records.act_number as actNumber',
+                        'sacrament_records.observation',
+                        'sacrament_records.status'
+                    )
+                    ->join('sacrament_records', 'sacrament_books.id', '=', 'sacrament_records.sacrament_book_id')
+                    ->join('sacrament_roles', 'sacrament_records.id', '=', 'sacrament_roles.sacrament_record_id')
+                    ->leftJoin('people as husband', function ($join) {
+                        $join->on('husband.id', '=', 'sacrament_roles.person_id')
+                            ->where('sacrament_roles.role', '=', '2');
+                    })
+                    ->leftJoin('people as wife', function ($join) {
+                        $join->on('wife.id', '=', 'sacrament_roles.person_id')
+                            ->where('sacrament_roles.role', '=', '3');
+                    })->whereIn('sacrament_roles.role', ['2', '3'])
+                    ->where('sacrament_books.id', $id)
+                    ->where('sacrament_books.sacrament_type', $sacramentBooks->sacrament_type)
+                    ->orderBy('sacrament_records.folio_number', 'asc')
+                    ->orderBy('sacrament_records.act_number', 'asc')
+                    ->groupBy('sacrament_records.id')
+                    ->get();
+            }
+
+            return ApiResponse::success($registers);
+        } catch (\Exception $e) {
+            return ApiResponse::error($e->getMessage(), 'Error al obtener los registros del libro');
+        }
+    }
 }

@@ -23,7 +23,7 @@ class Sacrament extends Model
     ];
 
     protected $casts = [
-        'date'  => 'date:Y-m-d',
+        // 'date'  => 'date:Y-m-d',
         'status' => 'boolean',
         'is_external' => 'boolean',
         'parish_id' => 'integer',
