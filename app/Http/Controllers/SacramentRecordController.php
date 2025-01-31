@@ -852,14 +852,19 @@ class SacramentRecordController extends Controller
     private function updateMainPerson($data)
     {
 
-        $person = Person::where('document_type', $data['documentType'])
-            ->where('document_number', $data['documentNumber'])
-            ->where('id', '!=', $data['personId'])
-            ->exists();
+        //el tipo de documento  y el numero de documento puden ser nulos, enses caso no se valida
 
-        if ($person) {
-            throw new \Exception('Ya existe otra persona con el documento: ' . $data['documentNumber']);
+        if ($data['documentType'] && $data['documentNumber']) {
+            $person = Person::where('document_type', $data['documentType'])
+                ->where('document_number', $data['documentNumber'])
+                ->where('id', '!=', $data['personId'])
+                ->exists();
+
+            if ($person) {
+                throw new \Exception('Ya existe otra persona con el documento: ' . $data['documentNumber']);
+            }
         }
+
 
         $person = Person::find($data['personId']);
 
